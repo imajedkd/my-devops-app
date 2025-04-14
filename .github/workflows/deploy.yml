@@ -1,13 +1,32 @@
 name: Deploy to EC2
-      run: |
-        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@54.203.38.201 << 'EOF'
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v3
+
+      - name: Add SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: Deploy to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@54.203.38.201 << 'EOF'
           sudo apt update
           sudo apt install -y nodejs npm git lsof
           rm -rf my-devops-app
           git clone https://github.com/imajedkd/my-devops-app.git
           cd my-devops-app
 
-          # ✅ Step: Free port 3000 if occupied
           pid=$(sudo lsof -t -i:3000)
           if [ ! -z "$pid" ]; then
             echo "Port 3000 in use, killing process $pid"
@@ -18,5 +37,4 @@ name: Deploy to EC2
 
           npm install
           nohup node index.js > output.log 2>&1 &
-        EOF
-
+          EOF
